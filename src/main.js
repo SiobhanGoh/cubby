@@ -29,7 +29,8 @@ const toRoot = v => [v.x, -v.z, v.y];                                          /
 // ---------------------------------------------------------------- the empty room
 const shell = new THREE.Group(); root.add(shell);
 const skyMat = new THREE.MeshBasicMaterial({ color: '#A8D8F5' });
-const bulbs = [], strips = [], drops = [], panes = [];
+const bulbs = [], strips = [], drops = [], panes = [], dress = [];
+const dressed = (mesh, part, move) => { mesh.userData.shell = part; dress.push({ m: mesh, part, move }); return mesh; };   // a window part that moves when clicked
 const room = { curtains: false, curtainK: 0, window: false, windowK: 0, lights: true };   // things in the room itself you can click
 const darkMat = new THREE.MeshStandardMaterial({ color: '#191a20', roughness: .35 });
 const rainMat = new THREE.MeshBasicMaterial({ color: '#EAF2FA', transparent: true, opacity: .75 });
@@ -49,7 +50,7 @@ function cloth(yc, width, top, height, color) {      // a curtain made of a grid
   strips.push({ geo, uv: geo.attributes.uv.array.slice(), yc, width, top, height, ph: strips.length * 1.7, mid: yc, full: width });
 }
 function buildShell() {
-  shell.clear(); bulbs.length = 0; strips.length = 0; drops.length = 0; panes.length = 0;
+  shell.clear(); bulbs.length = 0; strips.length = 0; drops.length = 0; panes.length = 0; dress.length = 0;
   const w = WINDOWS[look.id], [y0, y1] = w.y, [z0, z1] = w.z, my = (y0 + y1) / 2, mz = (z0 + z1) / 2, ww = y1 - y0, wh = z1 - z0;
   box(shell, [W + T, W + T, .16], [W / 2 - T / 2, W / 2 + T / 2, -.08], P.floor, { r: .04, kind: 'floor' });
   box(shell, [W, T, H], [W / 2, W + T / 2, H / 2], P.wall2, { r: .03, kind: 'wall' });
@@ -74,8 +75,9 @@ function buildShell() {
   }
   if (w.dress === 'shutters') {
     for (const cy of [y0 - .26, y1 + .26]) {
-      box(shell, [.04, .42, wh], [.02, cy, mz], P.soft, { r: .012 });
-      for (let k = 0; k < 7; k++) box(shell, [.02, .32, .03], [.045, cy, z0 + .12 + k * (wh - .24) / 6], P.accent2, { r: .006, rot: [0, .5, 0] });
+      const slide = (cy < my ? 1 : -1) * Math.min(.47, ww / 2 - .02), shut = (o, k) => { o.position.y = cy + slide * k; };
+      dressed(box(shell, [.04, .42, wh], [.02, cy, mz], P.soft, { r: .012 }), 'curtains', shut);
+      for (let k = 0; k < 7; k++) dressed(box(shell, [.02, .32, .03], [.045, cy, z0 + .12 + k * (wh - .24) / 6], P.accent2, { r: .006, rot: [0, .5, 0] }), 'curtains', shut);
     }
     box(shell, [.17, ww + .1, .13], [.12, my, z0 - .12], P.wood, { r: .02 });
     for (let k = 0; k < 7; k++) {
@@ -85,14 +87,14 @@ function buildShell() {
     }
   }
   if (w.dress === 'blind') {
-    box(shell, [.035, ww + .08, wh * .38], [.03, my, z1 - wh * .19], P.accent, { kind: 'fabric', r: .012 });
+    dressed(box(shell, [.035, ww + .08, wh * .38], [.03, my, z1 - wh * .19], P.accent, { kind: 'fabric', r: .012 }), 'curtains', (o, k) => { const s = 1 + 1.6 * k; o.scale.z = s; o.position.z = z1 - wh * .19 * s; });
     box(shell, [.06, ww + .12, .06], [.035, my, z1 + .02], P.accent2, { r: .025 });
     cyl(shell, .004, .22, [.05, y1 - .12, z1 - wh * .38 - .11], P.cream);
     blob(shell, [.025, .025, .025], [.05, y1 - .12, z1 - wh * .38 - .23], P.accent2);
   }
-  if (w.dress === 'venetian') for (let k = 0; k < 11; k++) box(shell, [.05, ww, .012], [.04, my, z1 - .06 - k * .075], P.soft2, { r: .004, rot: [0, .45, 0] });
-  if (w.dress === 'louvre') for (let c = 0; c < 2; c++) for (let k = 0; k < 7; k++) box(shell, [.11, ww / 2 - .05, .012], [-.01, y0 + ww / 4 + c * ww / 2, z0 + .08 + k * (wh - .16) / 6], '#D8F0F2', { kind: 'glass', r: 0, rot: [0, .7, 0] }).castShadow = false;
-  if (w.dress === 'shoji') box(shell, [.015, ww / 2, wh], [.03, y0 + ww / 4, mz], '#FFF8EA', { kind: 'glow0.35/0.15', r: 0 });
+  if (w.dress === 'venetian') for (let k = 0; k < 11; k++) dressed(box(shell, [.05, ww, .012], [.04, my, z1 - .06 - k * .075], P.soft2, { r: .004, rot: [0, .45, 0] }), 'curtains', (o, k) => { o.rotation.y = .45 + 1.05 * k; o.scale.x = 1 + .45 * k; });
+  if (w.dress === 'louvre') for (let c = 0; c < 2; c++) for (let k = 0; k < 7; k++) dressed(box(shell, [.11, ww / 2 - .05, .012], [-.01, y0 + ww / 4 + c * ww / 2, z0 + .08 + k * (wh - .16) / 6], '#D8F0F2', { kind: 'glass', r: 0, rot: [0, .7, 0] }), 'window', (o, k) => { o.rotation.y = .7 - .68 * k; }).castShadow = false;
+  if (w.dress === 'shoji') dressed(box(shell, [.015, ww / 2, wh], [.03, y0 + ww / 4, mz], '#FFF8EA', { kind: 'glow0.35/0.15', r: 0 }), 'window', (o, k) => { o.position.y = y0 + ww / 4 + (ww / 2 - .04) * k; });
   box(shell, [W, .02, .08], [W / 2, W - .01, .04], P.cream, { r: .006 });
   box(shell, [.02, W, .08], [.01, W / 2, .04], P.cream, { r: .006 });
   const ceil = new THREE.Mesh(new THREE.BoxGeometry(W + 1, W + 1, .05), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
@@ -657,6 +659,7 @@ function frame() {
   const live = mode !== 'build', rain = isRaining(), wind = (.7 + .5 * Math.sin(t * .31) + .3 * Math.sin(t * .83)) * (rain ? 1.7 : 1);
   room.curtainK += ((room.curtains ? 1 : 0) - room.curtainK) * Math.min(1, dt * 3); room.windowK += ((room.window ? 1 : 0) - room.windowK) * Math.min(1, dt * 4);
   for (const pn of panes) pn.m.position.y = pn.y + pn.d * room.windowK;
+  for (const d of dress) d.move(d.m, d.part === 'window' ? room.windowK : room.curtainK);
   const gust = wind * (.45 + 1.2 * room.windowK);
   for (const s of strips) {
     const pos = s.geo.attributes.position, n = pos.count, wide = s.width + (s.full - s.width) * room.curtainK, dir = Math.sign(s.yc - s.mid), yc = s.yc - dir * (wide - s.width) / 2;
