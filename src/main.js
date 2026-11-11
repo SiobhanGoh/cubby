@@ -249,9 +249,10 @@ controls.minZoom = .75; controls.maxZoom = 2.6; controls.minPolarAngle = .75; co
 controls.minAzimuthAngle = .3; controls.maxAzimuthAngle = PI / 2 - .3; controls.rotateSpeed = .6;
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight, a = w / h;
-  const build = mode === 'build';
-  const halfH = a >= 1 ? (build ? 4.5 : 3.0) : (build ? 3.3 : 2.7) / a, halfW = halfH * a;
-  const lift = build ? halfH * (a >= 1 ? .36 : .24) : 0;                        // leave room for the build tray
+  // in build mode the tray covers the bottom of the screen, so fit the room into the space above it
+  const tray = mode === 'build' ? Math.min(h * .6, $('.tray').offsetHeight + 24) : (mode === 'visit' ? 70 : 60), free = h - tray - 56, af = w / free;
+  const fit = af >= 1 ? 2.95 : 2.75 / af, halfH = fit * h / free, halfW = halfH * a;
+  const lift = halfH * (tray - 56) / h;                        // leave room for the build tray
   Object.assign(cam, { left: -halfW, right: halfW, top: halfH - lift, bottom: -halfH - lift }); cam.updateProjectionMatrix();
   renderer.setSize(w, h, false);
 }
@@ -267,6 +268,7 @@ function pick(e) { setRay(e); for (const h of ray.intersectObjects(root.children
 function planeHit(normal, constant) { const v = new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(normal, constant), v) ? toRoot(v) : null; }
 const snap = v => Math.round(v / .05) * .05;
 function select(e) {
+  requestAnimationFrame(resize);
   selected = e; ring.visible = !!e; if (!e) $('#linkform').hidden = true;
   $('#sel').hidden = !e; $('#empty').hidden = !!e;
   if (!e) return;
@@ -358,7 +360,7 @@ function spawn(id, near) {
     e.spec.pos = [Math.min(W - .7, .8 + taken * .5), W, 1.9 - (taken % 2) * .5]; sync(e);
   } else {
     // look for a free patch of floor, starting from the open middle of the room
-    const others = placed.filter(o => o !== e && !o.def.flat && !o.def.wall && !o.def.sits).map(bounds);
+    const others = placed.filter(o => o !== e && !o.def.flat && !o.def.wall && (def.sits ? o.spec.pos[2] < .05 : !o.def.sits)).map(bounds);
     const spots = [];
     for (let x = .3; x <= W - .3; x += .25) for (let y = .3; y <= W - .3; y += .25) spots.push([x, y]);
     spots.sort((a, b) => Math.hypot(a[0] - 1.9, a[1] - 1.1) - Math.hypot(b[0] - 1.9, b[1] - 1.1));
@@ -435,7 +437,7 @@ function renderLook() {
 }
 function renderTray() {
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
-  $('#things').hidden = tab !== 'things'; $('#lookpane').hidden = tab !== 'look'; renderLook();
+  $('#things').hidden = tab !== 'things'; $('#lookpane').hidden = tab !== 'look'; renderLook(); requestAnimationFrame(resize);
   document.querySelectorAll('#chips button').forEach(b => b.setAttribute('aria-pressed', String(b.textContent === category)));
   document.querySelectorAll('#strip .card').forEach(b => { b.hidden = b.dataset.cat !== category; });
 }
@@ -538,7 +540,7 @@ function freeSpot(e, x, y) {
 }
 function petStep(e, dt) {
   const cfg = e.def.pet, night = mood === 'night', onFloor = e.spec.pos[2] < .05;
-  const p = e.pet || (e.pet = { state: 'idle', wait: 1.5 + Math.random() * 5, x: e.spec.pos[0], y: e.spec.pos[1], rz: (e.spec.rz || 0) * PI / 180, k: 0 });
+  const p = e.pet || (e.pet = { state: 'idle', wait: .8 + Math.random() * 3, x: e.spec.pos[0], y: e.spec.pos[1], rz: (e.spec.rz || 0) * PI / 180, k: 0 });
   const out = { sy: 1, sz: 1, rx: 0, hz: 0 }, head = e.inner.children[cfg.head];
   if (head && head.userData.bz === undefined) head.userData.bz = head.position.z;
   let nod = 0;
@@ -546,7 +548,7 @@ function petStep(e, dt) {
     p.wait -= dt * (night ? .3 : 1);
     if (p.wait <= 0) {
       const r = Math.random(); p.k = 0;
-      if (onFloor && !night && r < .5) {
+      if (onFloor && !night && r < .6) {
         let found = null;
         for (let i = 0; i < 10 && !found; i++) {
           const a = Math.random() * 2 * PI, d = .4 + Math.random() * 1.1, tx = p.x + Math.cos(a) * d, ty = p.y + Math.sin(a) * d;
@@ -564,7 +566,7 @@ function petStep(e, dt) {
     }
     if (p.state === 'stretch') { out.sy = 1 + .24 * s; out.sz = 1 - .15 * s; out.rx = -.1 * s; }
     if (p.state === 'groom') { nod = Math.sin(k * PI * 7) * .5 * s + .5 * s; out.rx = -.05 * s; }
-    if (p.k >= 1) { p.state = 'idle'; p.wait = 2.5 + Math.random() * 7; }
+    if (p.k >= 1) { p.state = 'idle'; p.wait = 1.2 + Math.random() * 4; }
   }
   if (head) { head.rotation.x = -nod * .28; head.position.z = head.userData.bz - nod * .018; }
   e.outer.position.x = p.x; e.outer.position.y = p.y; e.outer.rotation.z = p.rz;
@@ -579,7 +581,7 @@ function frame() {
   for (const g of glowMats) g.m.emissiveIntensity = g.day + (g.night - g.day) * Math.max(cur.glow, g.night === 3 ? Math.min(1, cur.lamp / 6) : 0);
   bulbs.forEach((b, i) => b.scale.setScalar(1 + .18 * Math.sin(t * 2.2 + i * 1.7) * (.3 + cur.glow)));
   const live = mode !== 'build', rain = isRaining(), wind = (.7 + .5 * Math.sin(t * .31) + .3 * Math.sin(t * .83)) * (rain ? 1.7 : 1);
-  for (const s of strips) { const a = Math.max(0, .015 + .07 * wind * (.5 + .5 * Math.sin(t * 1.2 + s.i * .55)) + .025 * Math.sin(t * 2.7 + s.i)); s.m.rotation.y = -a; s.m.position.x = s.x + Math.sin(a) * s.h / 2; s.m.position.z = s.z + (1 - Math.cos(a)) * s.h / 2; }
+  for (const s of strips) { const a = Math.max(0, .02 + .13 * wind * (.5 + .5 * Math.sin(t * 1.5 + s.i * .6)) + .04 * Math.sin(t * 3.1 + s.i)); s.m.rotation.y = -a; s.m.position.x = s.x + Math.sin(a) * s.h / 2; s.m.position.z = s.z + (1 - Math.cos(a)) * s.h / 2; }
   for (const d of drops) { d.visible = rain; if (rain) { d.position.z -= d.userData.v * dt; if (d.position.z < d.userData.z0) d.position.z = d.userData.z1; } }
   for (const e of placed) {
     let sx = 1, sz = 1;
@@ -595,8 +597,8 @@ function frame() {
       hh.rotation.y = hr; hh.position.x = .045 * Math.sin(hr); hh.position.z = .045 * Math.cos(hr); mh.rotation.y = ma; mh.position.x = .07 * Math.sin(ma); mh.position.z = .07 * Math.cos(ma); }
     if (e.def.idle === 'spin' && mode !== 'build') e.inner.children.forEach((c, i) => { if (i >= 5) { const a = dt * 9; const x = c.position.x, z = c.position.z - 1.22; c.position.x = x * Math.cos(a) - z * Math.sin(a); c.position.z = 1.22 + x * Math.sin(a) + z * Math.cos(a); c.rotation.y -= a; } });
     if (e.def.idle === 'sway') {
-      e.inner.rotation.x = Math.sin((t + e.t0) * .9) * .03 * wind; e.inner.rotation.y = Math.cos((t + e.t0) * .7) * .03 * wind;
-      e.inner.children.forEach((c, i) => { if (i < 2) return; if (c.userData.rx === undefined) c.userData.rx = c.rotation.x; c.rotation.x = c.userData.rx + Math.sin(t * 1.9 + i * 1.3 + e.t0) * .07 * wind; });
+      e.inner.rotation.x = Math.sin((t + e.t0) * 1.1) * .045 * wind; e.inner.rotation.y = Math.cos((t + e.t0) * .8) * .045 * wind;
+      e.inner.children.forEach((c, i) => { if (i < 2) return; if (c.userData.rx === undefined) c.userData.rx = c.rotation.x; c.rotation.x = c.userData.rx + Math.sin(t * 2.1 + i * 1.3 + e.t0) * .12 * wind; });
     }
   }
   if (selected) {
@@ -618,3 +620,4 @@ buildTray(); load(); chooseMood('auto'); setMode('build'); frame();
 try { weather.place = JSON.parse(localStorage.getItem('cubby.place')); } catch (err) { weather.place = null; }
 loadWeather();
 if (location.hash.length > 6) visit(location.hash);
+window.addEventListener('hashchange', () => { if (location.hash.length > 6) visit(location.hash); });
