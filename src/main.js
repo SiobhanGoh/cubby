@@ -534,13 +534,14 @@ function spawnHearts(entry) {
 }
 
 // ---------------------------------------------------------------- pets: wander, stretch, groom
-function freeSpot(e, x, y) {
-  if (x < .3 || y < .3 || x > W - .3 || y > W - .3) return false;
-  return !placed.some(o => { if (o === e || !solid(o)) return false; const b = bounds(o); return x > b.x0 - .17 && x < b.x1 + .17 && y > b.y0 - .17 && y < b.y1 + .17; });
+function freeSpot(e, x, y, r = .17) {         // r = how much room this pet needs around it
+  if (x < r + .1 || y < r + .1 || x > W - r - .1 || y > W - r - .1) return false;
+  return !placed.some(o => { if (o === e || !solid(o)) return false; const b = bounds(o); return x > b.x0 - r && x < b.x1 + r && y > b.y0 - r && y < b.y1 + r; });
 }
 function petStep(e, dt) {
   const cfg = e.def.pet, night = mood === 'night', onFloor = e.spec.pos[2] < .05;
   const p = e.pet || (e.pet = { state: 'idle', wait: .8 + Math.random() * 3, x: e.spec.pos[0], y: e.spec.pos[1], rz: (e.spec.rz || 0) * PI / 180, k: 0 });
+  if (p.rad === undefined) { const b = bounds(e); p.rad = Math.max(.17, Math.max(b.x1 - b.x0, b.y1 - b.y0) * .42); }
   const out = { sy: 1, sz: 1, rx: 0, hz: 0 }, head = e.inner.children[cfg.head];
   if (head && head.userData.bz === undefined) head.userData.bz = head.position.z;
   let nod = 0;
@@ -552,7 +553,7 @@ function petStep(e, dt) {
         let found = null;
         for (let i = 0; i < 10 && !found; i++) {
           const a = Math.random() * 2 * PI, d = .4 + Math.random() * 1.1, tx = p.x + Math.cos(a) * d, ty = p.y + Math.sin(a) * d;
-          if ([.25, .5, .75, 1].every(f => freeSpot(e, p.x + (tx - p.x) * f, p.y + (ty - p.y) * f))) found = [tx, ty, d];
+          if ([.25, .5, .75, 1].every(f => freeSpot(e, p.x + (tx - p.x) * f, p.y + (ty - p.y) * f, p.rad))) found = [tx, ty, d];
         }
         if (found) { p.state = 'walk'; p.fx = p.x; p.fy = p.y; p.tx = found[0]; p.ty = found[1]; p.dist = found[2]; p.dur = found[2] / cfg.speed; p.trz = Math.atan2(p.tx - p.x, -(p.ty - p.y)); } else p.wait = 1.5;
       } else if (r < .75 && !cfg.calm) { p.state = 'stretch'; p.dur = 1.9; } else { p.state = 'groom'; p.dur = 2.6; }
