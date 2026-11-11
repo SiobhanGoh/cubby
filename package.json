@@ -1,0 +1,9 @@
+{
+  "name": "cubby",
+  "version": "0.1.0",
+  "description": "A tiny 3D room on the internet that is all yours.",
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "license": "MIT",
+  "devDependencies": { "esbuild": "^0.28.2", "three": "^0.187.0" }
+}

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cubby · build mode</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@600;800&display=swap">
+<style>
+:root{--bg0:#F7F3EA;--bg1:#E6EEDD;--ink:#3B2C35;--muted:#6E5C66;--line:#EEDFD2;--coral:#FF8A65}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:linear-gradient(180deg,var(--bg0),var(--bg1));overflow:hidden}
+body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg,#191B3A,#2A2550);opacity:0;transition:opacity .9s}
+body.dark::before{opacity:1}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+button{font-family:inherit;color:var(--ink);cursor:pointer}
+button:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.top{position:fixed;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:12px 16px;pointer-events:none}
+.top>*{pointer-events:auto}
+.logo{font-family:'Fredoka',sans-serif;font-weight:700;font-size:26px;letter-spacing:-.01em;transition:color .6s}
+body.dark .logo{color:#F4EFE6}
+.sp{flex:1;pointer-events:none}
+.pill{display:inline-flex;gap:3px;padding:4px;border-radius:999px;background:rgba(255,255,255,.9);box-shadow:0 6px 20px rgba(40,25,30,.12)}
+.pill button,.btn{font-weight:800;font-size:14px;border:0;background:transparent;height:40px;padding:0 16px;border-radius:999px;white-space:nowrap}
+.pill button[aria-pressed="true"]{background:var(--ink);color:#FFF8F1}
+.btn{background:rgba(255,255,255,.9);box-shadow:0 6px 20px rgba(40,25,30,.12)}
+.tray{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(860px,calc(100vw - 20px));background:rgba(255,255,255,.94);border-radius:26px;box-shadow:0 14px 40px rgba(40,25,30,.2);padding:12px 12px 10px;display:flex;flex-direction:column;gap:10px}
+body[data-mode="live"] .tray,body[data-mode="live"] #save{display:none}
+.save{background:var(--ink);color:#FFF8F1}.save:disabled{background:rgba(255,255,255,.9);color:var(--muted);cursor:default}
+.act.ico{width:44px;height:44px;padding:0;justify-content:center}
+#toast{position:fixed;left:50%;top:70px;transform:translate(-50%,-12px);padding:10px 18px;border-radius:999px;background:var(--ink);color:#FFF8F1;font-weight:800;font-size:14px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.livehint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.9);font-weight:800;font-size:14px;box-shadow:0 6px 20px rgba(40,25,30,.12);white-space:nowrap}
+body[data-mode="build"] .livehint,body[data-mode="visit"] .livehint{display:none}
+body[data-mode="visit"] .tray,body[data-mode="visit"] #save,body[data-mode="visit"] .pill,body[data-mode="visit"] #share{display:none}
+#visitbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:none;align-items:center;gap:12px;padding:8px 8px 8px 18px;border-radius:999px;background:rgba(255,255,255,.94);font-weight:800;font-size:14px;box-shadow:0 6px 20px rgba(40,25,30,.14);white-space:nowrap}
+body[data-mode="visit"] #visitbar{display:flex}
+.act:disabled{opacity:.35;cursor:default}
+#linkbtn[aria-pressed="true"]{border-color:var(--coral);background:#FFF3EC;color:#B4462A}
+#linkrow input{flex:1;min-width:140px;height:44px;padding:0 12px;border-radius:14px;border:1.5px solid var(--line);font:600 14px 'Nunito',sans-serif;color:var(--ink);background:#FFFBF7}
+#linkbar{position:fixed;left:50%;bottom:76px;transform:translateX(-50%)}
+#linkbar a{display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 22px;border-radius:18px;background:var(--ink);color:#FFF8F1;text-decoration:none;box-shadow:0 10px 30px rgba(40,25,30,.3)}
+#linkbar b{font-size:15px}#linkbar small{font-size:12px;opacity:.75}
+#moodbox{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(40,25,30,.35);padding:16px}
+#moodbox>div{background:#fff;border-radius:24px;padding:22px;width:min(460px,100%);display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+#moodbox b{font-family:'Fredoka',sans-serif;font-size:22px}#moodbox .opts{flex-wrap:wrap;overflow:visible}
+#moodbox label{font-size:13px;font-weight:800;color:var(--muted);margin-top:4px}
+#moodbox input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:14px;border:1.5px solid var(--line);font:600 15px 'Nunito',sans-serif;color:var(--ink);background:#FFFBF7}
+#moodbox p{margin:0;min-height:20px;font-size:14px;font-weight:600;color:var(--ink)}#moodbox small{color:var(--muted);font-size:12px}#moodbox a{color:#B4462A}
+#closemood{align-self:flex-end}
+#sharebox{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(40,25,30,.35);padding:16px}
+#sharebox>div{background:#fff;border-radius:24px;padding:22px;width:min(440px,100%);display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+#sharebox b{font-family:'Fredoka',sans-serif;font-size:22px}
+#sharebox label{font-size:13px;font-weight:800;color:var(--muted);margin-top:4px}
+#sharebox input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:14px;border:1.5px solid var(--line);font:600 14px ui-monospace,Menlo,monospace;color:var(--ink);background:#FFFBF7}
+#sharebox p{margin:0;min-height:18px;font-size:13px;font-weight:600;color:#B4462A}
+#closeshare{align-self:flex-end}
+.row{display:flex;align-items:center;gap:8px;min-height:44px;flex-wrap:wrap}
+#empty{font-size:14px;font-weight:600;color:var(--muted);padding:0 6px}
+#selname{font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;padding:0 6px}
+.act{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border-radius:14px;border:1.5px solid var(--line);background:#fff;font-weight:800;font-size:14px}
+.act.danger{color:#B4462A}
+#swatches{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
+#swatches button{width:30px;height:30px;border-radius:50%;border:0;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.12)}
+#swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4.5px var(--coral)}
+#swatches .orig{width:auto;padding:0 12px;border-radius:999px;background:#fff;font-weight:800;font-size:13px;color:var(--muted)}
+#chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+#chips button{flex:none;height:36px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-weight:800;font-size:14px}
+#chips button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#FFF8F1}
+#strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.card{flex:none;width:104px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 6px 8px;border-radius:18px;border:1.5px solid var(--line);background:#FFFBF7;font-weight:800;font-size:12.5px;line-height:1.2;text-align:center}
+.card:hover{border-color:var(--coral)}
+.card img{width:76px;height:76px;display:block}
+.tabs{display:flex;gap:4px;padding:3px;border-radius:14px;background:#F6EDE5;align-self:flex-start}
+.tabs button{height:36px;padding:0 14px;border-radius:11px;border:0;background:transparent;font-weight:800;font-size:14px;color:var(--muted)}
+.tabs button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.pane{display:flex;flex-direction:column;gap:10px;min-height:148px}
+.lrow{display:flex;align-items:center;gap:10px}
+.lrow b{flex:none;width:76px;font-size:13px;color:var(--muted)}
+.opts{display:flex;gap:6px;overflow-x:auto;padding:3px}
+.opts button{flex:none;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 13px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-weight:800;font-size:13.5px;white-space:nowrap}
+.opts button[aria-pressed="true"]{border-color:var(--coral);box-shadow:0 0 0 2px var(--coral)}
+#palettes i{width:13px;height:13px;border-radius:50%;margin-right:-5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+#palettes i:last-of-type{margin-right:5px}
+#templates button{flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:0;width:132px;height:58px;border-radius:14px;padding:0;overflow:hidden;border:1.5px solid var(--line)}
+#templates span,#templates small{background:rgba(255,255,255,.92);width:100%;padding:0 8px;text-align:left}
+#templates span{padding-top:3px;font-size:13px}#templates small{font-size:11px;font-weight:600;color:var(--muted);padding-bottom:3px}
+@media (max-width:620px){.lrow{flex-direction:column;align-items:flex-start;gap:2px}.lrow b{width:auto}.opts{max-width:100%}}
+#confirm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(40,25,30,.35);padding:20px}
+#confirm div{background:#fff;border-radius:24px;padding:22px;max-width:340px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+#confirm p{margin:0;font-weight:600;line-height:1.45}
+#confirm b{font-family:'Fredoka',sans-serif;font-size:20px}
+@media (max-width:520px){.logo{display:none}.top{gap:6px;padding:10px}}
+@media (max-width:620px){.logo{font-size:22px}.pill button,.btn{padding:0 12px;font-size:13px}.card{width:92px}.card img{width:64px;height:64px}#swatches{margin-left:0}}
+</style>
+</head>
+<body data-mode="build">
+<canvas id="c" aria-label="Your 3D room. In build mode, drag items to move them. Drag empty space to spin the room."></canvas>
+<div class="top">
+<span class="logo">cubby</span>
+<span class="sp"></span>
+<div class="pill" role="group" aria-label="Mode"><button type="button" data-mode-btn="build">Build</button><button type="button" data-mode-btn="live">Live</button></div>
+<span class="sp"></span>
+<button type="button" class="btn save" id="save" disabled>Saved</button>
+<button type="button" class="btn" id="share">Share</button>
+<button type="button" class="btn" id="mood" aria-label="Change time of day"><span>Morning</span></button>
+</div>
+<section class="tray" aria-label="Build tools">
+<div class="row">
+<button type="button" class="act ico" id="undo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg></button>
+<button type="button" class="act ico" id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5"></path><path d="M20 9H10a6 6 0 0 0 0 12h3"></path></svg></button>
+<span id="empty">Tap a thing to add it, drag to move. Nothing is kept until you press Save.</span>
+<div id="sel" class="row" hidden style="flex:1">
+<span id="selname"></span>
+<button type="button" class="act ico" id="rot" aria-label="Rotate" title="Rotate (R)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"></path><path d="M20 4v7h-7"></path></svg></button>
+<button type="button" class="act ico" id="dup" aria-label="Duplicate" title="Duplicate"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"></rect><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"></path></svg></button>
+<button type="button" class="act ico" id="linkbtn" aria-label="Link to an app or site" title="Link to an app or site"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"></path><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"></path></svg></button>
+<button type="button" class="act ico danger" id="del" aria-label="Delete" title="Delete (Del)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M9 7V4h6v3"></path><path d="M6 7l1 13h10l1-13"></path><path d="M10 11v5M14 11v5"></path></svg></button>
+<div id="swatches" role="group" aria-label="Colour"></div>
+</div>
+</div>
+<form id="linkform" class="row" hidden><input id="url" inputmode="url" autocomplete="off" aria-label="Link this item opens"><button type="submit" class="act">Set link</button><button type="button" class="act danger" id="unlink" hidden>Remove</button></form>
+<div class="tabs" role="group" aria-label="Tray section"><button type="button" data-tab="things">Things</button><button type="button" data-tab="look">Style and colours</button></div>
+<div id="things" class="pane">
+<div id="chips" role="group" aria-label="Categories"></div>
+<div id="strip"></div>
+</div>
+<div id="lookpane" class="pane" hidden>
+<div class="lrow"><b>Style</b><div id="styles" class="opts" role="group" aria-label="Style"></div></div>
+<div class="lrow"><b>Palette</b><div id="palettes" class="opts" role="group" aria-label="Palette"></div></div>
+<div class="lrow"><b>Templates</b><div id="templates" class="opts" role="group" aria-label="Room templates"></div></div>
+</div>
+</section>
+<p class="livehint">Live mode · pets wander by day and sleep at night</p>
+<div id="toast" role="status"></div>
+<div id="linkbar" hidden><a id="golink" target="_blank" rel="noopener noreferrer"><b id="goname"></b><small id="gohost"></small></a></div>
+<div id="visitbar"><span>You are visiting a room</span><button type="button" class="act" id="back">Back to my room</button></div>
+<div id="moodbox" class="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="mh"><div>
+<b id="mh">Time and weather</b>
+<div id="moods" class="opts" role="group" aria-label="Time of day"><button type="button" data-m="auto">Auto (real time)</button><button type="button" data-m="morning">Morning</button><button type="button" data-m="golden">Golden hour</button><button type="button" data-m="night">Night</button><button type="button" data-m="rain">Rain</button></div>
+<label for="city">Your city, for real weather</label>
+<form id="cityform" class="row"><input id="city" placeholder="e.g. Kuala Lumpur" autocomplete="off"><button type="submit" class="act">Set</button></form>
+<p id="wmsg"></p>
+<small>Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a></small>
+<button type="button" class="act" id="closemood">Done</button>
+</div></div>
+<div id="sharebox" hidden role="dialog" aria-modal="true" aria-labelledby="sh"><div>
+<b id="sh">Share your room</b>
+<label for="code" id="codelabel">Your room code</label>
+<div class="row"><input id="code" readonly><button type="button" class="act" id="copy">Copy</button></div>
+<label for="paste">Got a friend's code? Paste it to visit their room</label>
+<div class="row"><input id="paste" placeholder="cubby..."><button type="button" class="act" id="govisit">Visit</button></div>
+<p id="sharemsg"></p>
+<button type="button" class="act" id="closeshare">Close</button>
+</div></div>
+<script>/*BUNDLE*/</script>
+</body>
+</html>
