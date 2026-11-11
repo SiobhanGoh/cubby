@@ -4,31 +4,35 @@
 //   optional behaviour (idle, click), and a recipe build(g, p, c) that makes it from kit pieces.
 //   g = the group to build into, p = the room palette, c = this item's main colour.
 // Adding a new item = adding one entry here. Nothing else in the app changes.
-import { box, cyl, blob, torus } from './kit.js';
+import { box, cyl, blob, torus, sub, pivot, moving } from './kit.js';
 const PI = Math.PI, DARK = '#2B2228';
 const sp = (c, r, d) => { const n = Math.hypot(...d); return [c[0] + r[0] * d[0] / n, c[1] + r[1] * d[1] / n, c[2] + r[2] * d[2] / n]; };
 function face(g, c, r, o = {}) {
   const sep = o.sep ?? .42, eh = o.eh ?? .22;
   for (const s of [-1, 1]) {
     const p = sp(c, r, [s * sep, -1, eh]);
-    if (o.closed) blob(g, [r[0] * .2, r[0] * .05, r[0] * .05], p, DARK);
-    else { blob(g, [r[0] * .15, r[0] * .15, r[0] * .15], p, DARK, { kind: 'ceramic' }); blob(g, [r[0] * .05, r[0] * .05, r[0] * .05], [p[0] + r[0] * .05, p[1] - r[0] * .11, p[2] + r[0] * .06], '#FFFFFF'); }
+    blob(g, [r[0] * .15, r[0] * .15, r[0] * .15], p, DARK, { kind: 'ceramic', part: 'eye' });
+    blob(g, [r[0] * .05, r[0] * .05, r[0] * .05], [p[0] + r[0] * .05, p[1] - r[0] * .11, p[2] + r[0] * .06], '#FFFFFF', { part: 'eye' });
   }
   blob(g, [r[0] * .13, r[0] * .1, r[0] * .09], sp(c, r, [0, -1, -.08]), o.nose ?? '#E27D7A');
 }
 function ears(g, c, r, color, h = .07, w = .035) {
   for (const s of [-1, 1]) {
-    const p = sp(c, r, [s * .55, -.05, 1]);
-    cyl(g, w, h, [p[0], p[1], p[2] + h * .25], color, { r2: .004, rot: [0, s * .25, 0] });
-    cyl(g, w * .55, h * .7, [p[0], p[1] - w * .5, p[2] + h * .2], '#F6B9B0', { r2: .002, rot: [0, s * .25, 0] });
+    const p = sp(c, r, [s * .55, -.05, 1]), e = sub(g, 'ear');
+    cyl(e, w, h, [p[0], p[1], p[2] + h * .25], color, { r2: .004, rot: [0, s * .25, 0] });
+    cyl(e, w * .55, h * .7, [p[0], p[1] - w * .5, p[2] + h * .2], '#F6B9B0', { r2: .002, rot: [0, s * .25, 0] });
+    pivot(e, [p[0], p[1], p[2] - .01]);
   }
+}
+function legs(g, spots, r, h, color, paw) {                 // four legs, each turning at the hip
+  for (const [x, y] of spots) { const l = sub(g, 'leg'); cyl(l, r, h, [x, y, h / 2], color); if (paw) blob(l, [r * 1.15, r * 1.4, r * .7], [x, y - r * .3, r * .6], paw, { kind: 'fabric' }); pivot(l, [x, y, h]); }
 }
 function monitor(g, ox, oy, yaw, screen) {
   const w = .52, h = .31;
   cyl(g, .09, .012, [ox, oy + .04, .006], '#22232E', { kind: 'plastic' });
   box(g, [.04, .025, .2], [ox, oy + .05, .1], '#22232E', { kind: 'plastic', r: .006 });
   box(g, [w, .025, h], [ox, oy, .2 + h / 2], '#17181F', { kind: 'plastic', r: .008, rot: [0, 0, yaw] });
-  box(g, [w - .03, .004, h - .03], [ox + .014 * Math.sin(yaw), oy - .014 * Math.cos(yaw), .2 + h / 2], screen, { kind: 'glow0.5/1.7', r: 0, rot: [0, 0, yaw] });
+  box(g, [w - .03, .004, h - .03], [ox + .014 * Math.sin(yaw), oy - .014 * Math.cos(yaw), .2 + h / 2], screen, { kind: 'glow0.5/1.7', r: 0, rot: [0, 0, yaw], act: { glow: true } });
 }
 function pc(g, n, rgb) {
   const sc = ['#BFE3FF', '#FFC2E6', '#B9F3FF'];
@@ -75,10 +79,9 @@ export const ITEMS = {
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) cyl(g, .03, .06, [sx * .28, sy * .26, .03], '#3A2A22');
     box(g, [.72, .7, .22], [0, 0, .17], c, { kind: 'fabric', r: .08 });
     box(g, [.44, .5, .15], [0, -.05, .34], c, { kind: 'fabric', r: .06 });
-    box(g, [.5, .2, .64], [0, .3, .62], c, { kind: 'fabric', r: .09, rot: [-.28, 0, 0] });
+    const bk = moving(g, { turn: ['x', -.42] }); box(bk, [.5, .2, .64], [0, .3, .62], c, { kind: 'fabric', r: .09, rot: [-.12, 0, 0] }); pivot(bk, [0, .22, .32]);
     for (const s of [-1, 1]) box(g, [.17, .68, .34], [s * .31, 0, .38], c, { kind: 'fabric', r: .08 });
-    box(g, [.3, .22, .04], [0, -.42, .24], '#3A2A22', { kind: 'metal', r: .01 });
-    box(g, [.44, .3, .11], [0, -.56, .31], c, { kind: 'fabric', r: .05 });
+    const ft = moving(g, { v: [0, -.3, .12] }); box(ft, [.3, .22, .04], [0, -.2, .2], '#3A2A22', { kind: 'metal', r: .01 }); box(ft, [.44, .12, .3], [0, -.3, .2], c, { kind: 'fabric', r: .05 });
   } },
   princess: { name: 'Princess chair', category: 'Chairs', color: '#F4A9C4', build(g, p, c) {
     const gold = '#E3B54A';
@@ -128,20 +131,20 @@ export const ITEMS = {
     box(g, [1.05, .1, .95], [0, 1.0, .475], p.wood, { r: .05 });
     box(g, [.98, 1.9, .2], [0, -.02, .38], p.cream, { kind: 'fabric', r: .08 });
     box(g, [.62, .38, .13], [0, .68, .55], '#FFFFFF', { kind: 'fabric', r: .06 });
-    box(g, [1.08, 1.3, .12], [0, -.33, .52], c, { kind: 'fabric', r: .06 });
-    box(g, [1.1, .18, .05], [0, .28, .58], p.soft2, { kind: 'fabric', r: .025 });
+    box(g, [1.08, 1.3, .12], [0, -.33, .52], c, { kind: 'fabric', r: .06, act: { v: [0, -.33, .03], s: [1, .5, 1.5] } });
+    box(g, [1.1, .18, .05], [0, .28, .58], p.soft2, { kind: 'fabric', r: .025, act: { v: [0, -.66, .1], s: [1, 1.6, 1] } });
   } },
   futon: { name: 'Futon', category: 'Beds', color: '#DCD2C2', build(g, p, c) {
     box(g, [1.2, 2.15, .1], [0, 0, .05], p.wood, { r: .02 });
     box(g, [1.0, 1.95, .12], [0, 0, .16], p.cream, { kind: 'fabric', r: .05 });
-    box(g, [1.04, 1.25, .1], [0, -.34, .26], c, { kind: 'fabric', r: .045 });
+    box(g, [1.04, 1.25, .1], [0, -.34, .26], c, { kind: 'fabric', r: .045, act: { v: [0, -.32, .03], s: [1, .5, 1.5] } });
     box(g, [.5, .28, .09], [0, .72, .27], '#FFFFFF', { kind: 'fabric', r: .04 });
   } },
   canopy: { name: 'Canopy bed', category: 'Beds', color: '#F4A9C4', build(g, p, c) {
     const fr = '#FFFFFF', gold = '#E3B54A', dr = '#FBE3EC';
     box(g, [1.05, 2.05, .28], [0, 0, .14], fr); box(g, [1.05, .1, 1.1], [0, 1.0, .55], fr, { r: .05 });
     box(g, [.98, 1.9, .2], [0, -.02, .38], p.cream, { kind: 'fabric', r: .08 }); box(g, [.62, .38, .13], [0, .68, .55], '#FFFFFF', { kind: 'fabric', r: .06 });
-    box(g, [1.08, 1.3, .12], [0, -.33, .52], c, { kind: 'fabric', r: .06 }); box(g, [1.1, .18, .05], [0, .28, .58], '#FFFFFF', { kind: 'fabric', r: .025 });
+    box(g, [1.08, 1.3, .12], [0, -.33, .52], c, { kind: 'fabric', r: .06, act: { v: [0, -.33, .03], s: [1, .5, 1.5] } }); box(g, [1.1, .18, .05], [0, .28, .58], '#FFFFFF', { kind: 'fabric', r: .025, act: { v: [0, -.66, .1], s: [1, 1.6, 1] } });
     for (const sx of [-1, 1]) {
       for (const sy of [-1, 1]) { cyl(g, .03, 1.95, [sx * .5, sy * 1.0, .975], fr); blob(g, [.045, .045, .045], [sx * .5, sy * 1.0, 1.98], gold, { kind: 'gold' }); box(g, [.13, .13, 1.0], [sx * .5, sy * .97, 1.4], dr, { kind: 'fabric', r: .05 }); }
       box(g, [.04, 2.0, .04], [sx * .5, 0, 1.92], fr, { r: .01 });
@@ -154,14 +157,14 @@ export const ITEMS = {
     cyl(g, .85, .22, [0, 0, .11], p.wood, { kind: 'plastic' }); cyl(g, .8, .18, [0, 0, .31], p.cream, { kind: 'fabric' });
     blob(g, [.78, .12, .58], [0, .8, .5], c, { kind: 'plastic' });
     for (const s of [-1, 1]) blob(g, [.2, .13, .07], [s * .25, .45, .44], '#FFFFFF', { kind: 'fabric' });
-    blob(g, [.72, .46, .045], [0, -.3, .41], p.soft, { kind: 'fabric' });
+    blob(g, [.72, .46, .045], [0, -.3, .41], p.soft, { kind: 'fabric', act: { v: [0, -.25, .02], s: [1, .5, 1.6] } });
   } },
   // ------------------------------------------------------------ tables
   desk: { name: 'Desk', category: 'Tables', color: 'wood2', build(g, p, c) {
     box(g, [1.2, .62, .05], [0, 0, .74], c, { r: .02 });
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) box(g, [.05, .05, .72], [sx * .54, sy * .25, .36], p.wood, { r: .012 });
-    box(g, [.42, .55, .18], [.32, 0, .62], c, { r: .02 });
-    blob(g, [.02, .02, .02], [.32, -.285, .62], p.wood);
+    box(g, [.42, .55, .18], [.32, .01, .62], c, { r: .02 });
+    const dr = moving(g, { v: [0, -.3, 0] }); box(dr, [.37, .5, .13], [.32, -.03, .62], c, { r: .012 }); box(dr, [.33, .44, .02], [.32, -.03, .68], '#3A2A22', { r: 0 }); blob(dr, [.022, .022, .022], [.32, -.29, .62], p.metal, { kind: 'metal' });
   } },
   gamingdesk: { name: 'Gaming desk', category: 'Tables', color: '#4FE3FF', build(g, p, c) {
     box(g, [1.9, .66, .04], [0, 0, .74], '#1C1D27', { kind: 'plastic', r: .014 });
@@ -193,21 +196,21 @@ export const ITEMS = {
   laptop: { name: 'Laptop', category: 'Tech', sits: true, color: '#C9CED8', build(g, p, c) {
     box(g, [.34, .24, .016], [0, 0, .008], c, { kind: 'metal', r: .006 });
     box(g, [.28, .1, .003], [0, -.04, .017], '#8E94A3', { r: 0 });
-    box(g, [.34, .012, .23], [0, .14, .125], c, { kind: 'metal', r: .006, rot: [-.2, 0, 0] });
-    box(g, [.31, .004, .2], [0, .132, .125], '#BFE3FF', { kind: 'glow0.5/1.6', r: 0, rot: [-.2, 0, 0] });
+    const lid = moving(g, { turn: ['x', 1.77] }); box(lid, [.34, .012, .23], [0, .14, .125], c, { kind: 'metal', r: .006, rot: [-.2, 0, 0] });
+    box(lid, [.31, .004, .2], [0, .132, .125], '#BFE3FF', { kind: 'glow0.5/1.6', r: 0, rot: [-.2, 0, 0], act: { glow: true } }); pivot(lid, [0, .118, .018]);
   } },
   tablet: { name: 'Tablet', category: 'Tech', sits: true, color: '#E9EAEE', build(g, p, c) {
     box(g, [.12, .1, .012], [0, .04, .006], '#B9BDC8', { kind: 'metal', r: .004 });
     box(g, [.05, .012, .14], [0, .075, .07], '#B9BDC8', { kind: 'metal', r: .004, rot: [.35, 0, 0] });
     box(g, [.21, .012, .28], [0, .03, .155], c, { kind: 'metal', r: .006, rot: [-.3, 0, 0] });
-    box(g, [.19, .004, .26], [0, .0225, .155], '#FFD9EC', { kind: 'glow0.5/1.6', r: 0, rot: [-.3, 0, 0] });
+    box(g, [.19, .004, .26], [0, .0225, .155], '#FFD9EC', { kind: 'glow0.5/1.6', r: 0, rot: [-.3, 0, 0], act: { glow: true } });
   } },
   pc1: { name: 'PC · 1 screen', category: 'Tech', sits: true, build(g) { pc(g, 1, false); } },
   pc2: { name: 'PC · 2 screens', category: 'Tech', sits: true, build(g) { pc(g, 2, false); } },
   pc3: { name: 'Gaming PC · 3 screens', category: 'Tech', sits: true, build(g) { pc(g, 3, true); } },
   tv: { name: 'TV and console', category: 'Tech', color: 'wood', build(g, p, c) {
     box(g, [1.2, .36, .36], [0, 0, .26], c, { r: .015 }); for (const sx of [-1, 1]) for (const sy of [-1, 1]) cyl(g, .018, .1, [sx * .52, sy * .12, .05], p.metal);
-    box(g, [1.0, .04, .58], [0, .08, .78], '#17181F', { kind: 'plastic', r: .012 }); box(g, [.96, .004, .54], [0, .058, .78], '#B9E3FF', { kind: 'glow0.5/1.7', r: 0 });
+    box(g, [1.0, .04, .58], [0, .08, .78], '#17181F', { kind: 'plastic', r: .012 }); box(g, [.96, .004, .54], [0, .058, .78], '#B9E3FF', { kind: 'glow0.5/1.7', r: 0, act: { glow: true } });
     box(g, [.3, .1, .03], [0, .06, .46], '#17181F', { kind: 'plastic', r: .008 });
     box(g, [.26, .18, .05], [-.35, -.04, .465], '#F4F1EC', { kind: 'plastic', r: .015 }); box(g, [.14, .08, .03], [.3, -.08, .455], '#22232E', { kind: 'plastic', r: .014 });
   } },
@@ -220,56 +223,61 @@ export const ITEMS = {
     cyl(g, .065, .01, [0, -.092, .12], '#3A3D4D', { rot: [PI / 2, 0, 0] }); cyl(g, .035, .01, [0, -.092, .26], '#3A3D4D', { rot: [PI / 2, 0, 0] });
   } },
   // ------------------------------------------------------------ pets
-  cat: { name: 'Loaf cat', category: 'Pets', sits: true, idle: 'breathe', click: 'hearts', color: '#F3A55A', build(g, p, c) {
-    const belly = '#FFE6CC', h = [0, -.19, .17], hr = [.105, .1, .092];
-    blob(g, [.14, .2, .11], [0, .05, .11], c, { kind: 'fabric' }); blob(g, hr, h, c, { kind: 'fabric' });
-    blob(g, [.05, .035, .035], sp(h, hr, [0, -1, -.35]), belly, { kind: 'fabric' });
-    ears(g, h, hr, c); face(g, h, hr, { closed: true });
-    for (const s of [-1, 1]) blob(g, [.035, .04, .025], [s * .06, -.13, .03], belly, { kind: 'fabric' });
-    blob(g, [.03, .15, .03], [.13, .14, .045], c, { kind: 'fabric', rot: [0, 0, .5] });
+  cat: { name: 'Loaf cat', category: 'Pets', sits: true, click: 'hearts', color: '#F3A55A', build(g, p, c) {
+    const belly = '#FFE6CC', h = [0, -.19, .17], hr = [.105, .1, .092], f = { kind: 'fabric' };
+    legs(g, [[-.07, -.1], [.07, -.1], [-.07, .14], [.07, .14]], .028, .09, c, belly);
+    const bd = sub(g, 'body'); blob(bd, [.14, .2, .11], [0, .05, .11], c, f);
+    for (const y of [-.04, .06, .16]) blob(bd, [.1 * Math.sqrt(1 - ((y - .05) / .2) ** 2), .016, .01], [0, y, .11 + .108 * Math.sqrt(1 - ((y - .05) / .2) ** 2)], '#D9813E', f);
+    for (const s of [-1, 1]) blob(bd, [.035, .04, .025], [s * .06, -.13, .03], belly, { kind: 'fabric', part: 'paw' });
+    const tl = sub(bd, 'tail'); blob(tl, [.028, .15, .028], [.1, .26, .05], c, { kind: 'fabric', rot: [0, 0, .5] }); pivot(tl, [.03, .2, .06]);
+    const hd = sub(bd, 'head'); blob(hd, hr, h, c, f); blob(hd, [.05, .035, .035], sp(h, hr, [0, -1, -.35]), belly, f); ears(hd, h, hr, c); face(hd, h, hr); pivot(hd, [0, -.12, .13]);
+    pivot(bd, [0, .05, .02]);
   } },
-  tuxedo: { name: 'Tuxedo cat', category: 'Pets', sits: true, idle: 'breathe', click: 'hearts', color: '#2F2B33', build(g, p, c) {
-    const belly = '#F7F2EA', b = [0, .03, .16], br = [.105, .11, .16], h = [0, -.02, .38], hr = [.1, .095, .088];
-    blob(g, br, b, c, { kind: 'fabric' }); blob(g, hr, h, c, { kind: 'fabric' });
-    blob(g, [.06, .035, .09], sp(b, br, [0, -1, .15]), belly, { kind: 'fabric' });
-    blob(g, [.05, .035, .035], sp(h, hr, [0, -1, -.4]), belly, { kind: 'fabric' });
-    ears(g, h, hr, c, .08); face(g, h, hr);
-    for (const s of [-1, 1]) blob(g, [.03, .035, .03], [s * .045, -.09, .03], belly, { kind: 'fabric' });
-    blob(g, [.11, .03, .03], [.09, .1, .035], c, { kind: 'fabric', rot: [0, 0, -.4] });
+  tuxedo: { name: 'Tuxedo cat', category: 'Pets', sits: true, click: 'hearts', color: '#2F2B33', build(g, p, c) {
+    const belly = '#F7F2EA', b = [0, .03, .16], br = [.105, .11, .16], h = [0, -.02, .38], hr = [.1, .095, .088], f = { kind: 'fabric' };
+    legs(g, [[-.06, -.06], [.06, -.06], [-.06, .1], [.06, .1]], .028, .1, c, belly);
+    const bd = sub(g, 'body'); blob(bd, br, b, c, f); blob(bd, [.06, .035, .09], sp(b, br, [0, -1, .15]), belly, f);
+    for (const s of [-1, 1]) blob(bd, [.03, .035, .03], [s * .045, -.09, .03], belly, { kind: 'fabric', part: 'paw' });
+    const tl = sub(bd, 'tail'); blob(tl, [.11, .03, .03], [.1, .12, .035], c, { kind: 'fabric', rot: [0, 0, -.4] }); pivot(tl, [.02, .1, .04]);
+    const hd = sub(bd, 'head'); blob(hd, hr, h, c, f); blob(hd, [.05, .035, .035], sp(h, hr, [0, -1, -.4]), belly, f); ears(hd, h, hr, c, .08); face(hd, h, hr); pivot(hd, [0, 0, .3]);
+    pivot(bd, [0, .08, .06]);
   } },
-  bunny: { name: 'Bunny', category: 'Pets', sits: true, idle: 'breathe', click: 'hearts', color: '#FFFFFF', build(g, p, c) {
-    const pink = '#F9B8C6', h = [0, -.11, .2], hr = [.082, .078, .076];
-    blob(g, [.1, .13, .1], [0, .04, .1], c, { kind: 'fabric' }); blob(g, hr, h, c, { kind: 'fabric' });
+  bunny: { name: 'Bunny', category: 'Pets', sits: true, click: 'hearts', color: '#FFFFFF', build(g, p, c) {
+    const pink = '#F9B8C6', h = [0, -.11, .2], hr = [.082, .078, .076], f = { kind: 'fabric' };
+    const bd = sub(g, 'body'); blob(bd, [.1, .13, .1], [0, .04, .1], c, f); blob(bd, [.04, .04, .04], [0, .17, .1], c, f);
+    for (const s of [-1, 1]) { blob(bd, [.03, .04, .022], [s * .055, -.07, .025], c, f); blob(bd, [.035, .07, .028], [s * .08, .1, .028], c, f); }
+    const hd = sub(bd, 'head'); blob(hd, hr, h, c, f);
     for (const s of [-1, 1]) {
-      blob(g, [.024, .018, .1], [s * .04, -.09, .35], c, { kind: 'fabric', rot: [.15, s * .18, 0] });
-      blob(g, [.013, .01, .07], [s * .04, -.105, .35], pink, { kind: 'fabric', rot: [.15, s * .18, 0] });
-      blob(g, [.03, .04, .022], [s * .055, -.07, .025], c, { kind: 'fabric' });
+      const e = sub(hd, 'ear'); blob(e, [.024, .018, .1], [s * .04, -.09, .35], c, { kind: 'fabric', rot: [.15, s * .18, 0] }); blob(e, [.013, .01, .07], [s * .04, -.105, .35], pink, { kind: 'fabric', rot: [.15, s * .18, 0] }); pivot(e, [s * .035, -.09, .26]);
+      blob(hd, [.02, .012, .012], sp(h, hr, [s * .55, -1, -.25]), pink, f);
     }
-    face(g, h, hr, { sep: .5, nose: pink }); blob(g, [.04, .04, .04], [0, .17, .1], c, { kind: 'fabric' });
+    face(hd, h, hr, { sep: .5, nose: pink }); pivot(hd, [0, -.06, .15]);
+    pivot(bd, [0, .06, .02]);
   } },
-  corgi: { name: 'Corgi', category: 'Pets', sits: true, idle: 'breathe', click: 'hearts', color: '#E9A04E', build(g, p, c) {
-    const white = '#FFF6EA', h = [0, -.24, .33], hr = [.105, .1, .098];
-    blob(g, [.115, .24, .115], [0, .06, .2], c, { kind: 'fabric' }); blob(g, hr, h, c, { kind: 'fabric' });
-    blob(g, [.085, .07, .09], [0, -.15, .19], white, { kind: 'fabric' }); blob(g, [.055, .08, .05], [0, -.33, .3], white, { kind: 'fabric' });
-    blob(g, [.02, .016, .015], [0, -.41, .315], DARK, { kind: 'ceramic' });
+  corgi: { name: 'Corgi', category: 'Pets', sits: true, click: 'hearts', color: '#E9A04E', build(g, p, c) {
+    const white = '#FFF6EA', h = [0, -.24, .33], hr = [.105, .1, .098], f = { kind: 'fabric' };
+    legs(g, [[-.07, -.1], [.07, -.1], [-.07, .2], [.07, .2]], .032, .12, c, white);
+    const bd = sub(g, 'body'); blob(bd, [.115, .24, .115], [0, .06, .2], c, f); blob(bd, [.085, .07, .09], [0, -.15, .19], white, f); blob(bd, [.09, .06, .09], [0, .27, .2], white, f);
+    const tl = sub(bd, 'tail'); blob(tl, [.03, .05, .03], [0, .33, .27], c, f); pivot(tl, [0, .29, .25]);
+    const hd = sub(bd, 'head'); blob(hd, hr, h, c, f); blob(hd, [.055, .08, .05], [0, -.33, .3], white, f); blob(hd, [.02, .016, .015], [0, -.41, .315], DARK, { kind: 'ceramic' }); blob(hd, [.018, .008, .025], [0, -.385, .262], '#F08A8A');
     for (const s of [-1, 1]) {
-      cyl(g, .05, .13, [s * .07, -.23, .47], c, { r2: .008, rot: [0, s * .22, 0] });
-      blob(g, [.016, .016, .016], sp(h, hr, [s * .45, -1, .3]), DARK, { kind: 'ceramic' });
-      for (const y of [-.1, .2]) { cyl(g, .032, .1, [s * .07, y, .06], c); blob(g, [.036, .045, .025], [s * .07, y - .01, .025], white, { kind: 'fabric' }); }
+      const e = sub(hd, 'ear'); cyl(e, .05, .13, [s * .07, -.23, .47], c, { r2: .008, rot: [0, s * .22, 0] }); cyl(e, .028, .09, [s * .07, -.245, .46], '#F6C9A8', { r2: .004, rot: [0, s * .22, 0] }); pivot(e, [s * .065, -.23, .41]);
+      blob(hd, [.016, .016, .016], sp(h, hr, [s * .45, -1, .3]), DARK, { kind: 'ceramic', part: 'eye' });
     }
-    blob(g, [.09, .06, .09], [0, .27, .2], white, { kind: 'fabric' });
+    pivot(hd, [0, -.16, .27]); pivot(bd, [0, .06, .12]);
   } },
-  golden: { name: 'Golden retriever', category: 'Pets', sits: true, idle: 'breathe', click: 'hearts', color: '#E8B56A', build(g, p, c) {
-    const h = [0, -.38, .34], hr = [.15, .15, .14];
-    blob(g, [.2, .38, .17], [0, .05, .17], c, { kind: 'fabric' }); blob(g, hr, h, c, { kind: 'fabric' });
-    blob(g, [.14, .12, .13], [0, -.24, .2], c, { kind: 'fabric' }); blob(g, [.078, .1, .065], [0, -.5, .3], '#F6DDB0', { kind: 'fabric' });
-    blob(g, [.03, .024, .022], [0, -.6, .325], DARK, { kind: 'ceramic' });
+  golden: { name: 'Golden retriever', category: 'Pets', sits: true, click: 'hearts', color: '#E8B56A', build(g, p, c) {
+    const h = [0, -.38, .34], hr = [.15, .15, .14], f = { kind: 'fabric' }, dark = '#C98F45';
+    legs(g, [[-.11, -.2], [.11, -.2], [-.12, .26], [.12, .26]], .045, .2, c, '#F6DDB0');
+    const bd = sub(g, 'body'); blob(bd, [.2, .38, .17], [0, .05, .17], c, f); blob(bd, [.14, .12, .13], [0, -.24, .2], c, f);
+    for (const s of [-1, 1]) { blob(bd, [.055, .15, .045], [s * .1, -.43, .045], c, { kind: 'fabric', part: 'paw' }); blob(bd, [.08, .12, .07], [s * .18, .24, .07], c, { kind: 'fabric', part: 'paw' }); }
+    const tl = sub(bd, 'tail'); blob(tl, [.045, .18, .045], [.06, .52, .14], dark, { kind: 'fabric', rot: [.3, 0, .3] }); pivot(tl, [0, .38, .16]);
+    const hd = sub(bd, 'head'); blob(hd, hr, h, c, f); blob(hd, [.078, .1, .065], [0, -.5, .3], '#F6DDB0', f); blob(hd, [.03, .024, .022], [0, -.6, .325], DARK, { kind: 'ceramic' }); blob(hd, [.024, .01, .035], [0, -.57, .245], '#F08A8A');
     for (const s of [-1, 1]) {
-      blob(g, [.045, .075, .11], [s * .15, -.36, .31], '#C98F45', { kind: 'fabric', rot: [0, s * .2, 0] });
-      blob(g, [.02, .02, .02], sp(h, hr, [s * .42, -1, .32]), DARK, { kind: 'ceramic' });
-      blob(g, [.055, .15, .045], [s * .1, -.43, .045], c, { kind: 'fabric' }); blob(g, [.08, .12, .07], [s * .18, .24, .07], c, { kind: 'fabric' });
+      const e = sub(hd, 'ear'); blob(e, [.045, .075, .11], [s * .15, -.36, .31], dark, { kind: 'fabric', rot: [0, s * .2, 0] }); pivot(e, [s * .14, -.36, .41]);
+      blob(hd, [.02, .02, .02], sp(h, hr, [s * .42, -1, .32]), DARK, { kind: 'ceramic', part: 'eye' });
     }
-    blob(g, [.045, .18, .045], [.1, .46, .1], '#C98F45', { kind: 'fabric', rot: [0, 0, .6] });
+    pivot(hd, [0, -.26, .26]); pivot(bd, [0, .05, .03]);
   } },
   fishbowl: { name: 'Goldfish', category: 'Pets', sits: true, color: '#FF8A3C', build(g, p, c) {
     cyl(g, .1, .02, [0, 0, .03], '#F2D9A8');
@@ -278,35 +286,42 @@ export const ITEMS = {
     blob(g, [.14, .14, .13], [0, 0, .14], '#BFEAF7', { kind: 'glass' }).castShadow = false;
     torus(g, .085, .012, [0, 0, .255], '#DDF3FA', { kind: 'ceramic' });
   } },
-  hamster: { name: 'Hamster', category: 'Pets', sits: true, idle: 'breathe', click: 'hearts', color: '#E9B872', build(g, p, c) {
-    const h = [0, -.05, .075], hr = [.07, .075, .065];
-    blob(g, [.075, .09, .065], [0, .02, .065], c, { kind: 'fabric' }); blob(g, hr, h, c, { kind: 'fabric' });
-    blob(g, [.05, .04, .045], [0, -.07, .05], '#FFF6EA', { kind: 'fabric' });
-    for (const s of [-1, 1]) { blob(g, [.022, .012, .022], [s * .045, -.04, .135], c, { kind: 'fabric' }); blob(g, [.018, .022, .012], [s * .03, -.1, .012], '#F6B9B0'); }
-    face(g, h, hr, { sep: .5, eh: .3 });
+  hamster: { name: 'Hamster', category: 'Pets', sits: true, click: 'hearts', color: '#E9B872', build(g, p, c) {
+    const h = [0, -.05, .075], hr = [.07, .075, .065], f = { kind: 'fabric' };
+    const bd = sub(g, 'body'); blob(bd, [.075, .09, .065], [0, .02, .065], c, f); blob(bd, [.05, .04, .045], [0, -.07, .05], '#FFF6EA', f);
+    for (const s of [-1, 1]) blob(bd, [.018, .022, .012], [s * .03, -.1, .012], '#F6B9B0');
+    const hd = sub(bd, 'head'); blob(hd, hr, h, c, f);
+    for (const s of [-1, 1]) { const e = sub(hd, 'ear'); blob(e, [.022, .012, .022], [s * .045, -.04, .135], c, f); pivot(e, [s * .045, -.04, .12]); }
+    face(hd, h, hr, { sep: .5, eh: .3 }); pivot(hd, [0, -.02, .06]); pivot(bd, [0, .06, .01]);
   } },
-  parrot: { name: 'Parrot', category: 'Pets', idle: 'breathe', click: 'hearts', color: '#4FC48A', build(g, p, c) {
+  parrot: { name: 'Parrot', category: 'Pets', click: 'hearts', color: '#4FC48A', build(g, p, c) {
+    const f = { kind: 'fabric' };
     cyl(g, .16, .03, [0, 0, .015], p.wood); cyl(g, .015, 1.0, [0, 0, .5], p.wood); cyl(g, .012, .4, [0, 0, 1.0], p.wood, { rot: [0, PI / 2, 0] });
-    blob(g, [.065, .06, .1], [0, 0, 1.12], c, { kind: 'fabric' }); blob(g, [.055, .055, .055], [0, -.015, 1.24], c, { kind: 'fabric' });
-    cyl(g, .022, .05, [0, -.07, 1.23], '#F6C46A', { r2: .003, rot: [PI / 2 + .4, 0, 0] });
-    for (const s of [-1, 1]) { blob(g, [.012, .012, .012], [s * .035, -.05, 1.255], DARK, { kind: 'ceramic' }); blob(g, [.02, .05, .075], [s * .06, .01, 1.11], '#3F9A72', { kind: 'fabric' }); }
-    blob(g, [.025, .02, .09], [0, .05, 1.0], '#E2615A', { kind: 'fabric', rot: [.4, 0, 0] });
+    const bd = sub(g, 'body'); blob(bd, [.065, .06, .1], [0, 0, 1.12], c, f);
+    for (const s of [-1, 1]) { const w = sub(bd, 'wing'); blob(w, [.02, .05, .075], [s * .06, .01, 1.11], '#3F9A72', f); pivot(w, [s * .055, .01, 1.18]); w.userData.side = s; }
+    const tl = sub(bd, 'tail'); blob(tl, [.025, .02, .09], [0, .05, 1.0], '#E2615A', { kind: 'fabric', rot: [.4, 0, 0] }); pivot(tl, [0, .03, 1.06]);
+    const hd = sub(bd, 'head'); blob(hd, [.055, .055, .055], [0, -.015, 1.24], c, f); cyl(hd, .022, .05, [0, -.07, 1.23], '#F6C46A', { r2: .003, rot: [PI / 2 + .4, 0, 0] });
+    for (const s of [-1, 1]) blob(hd, [.012, .012, .012], [s * .035, -.05, 1.255], DARK, { kind: 'ceramic', part: 'eye' });
+    pivot(hd, [0, 0, 1.19]); pivot(bd, [0, 0, 1.02]);
   } },
   turtle: { name: 'Turtle', category: 'Pets', sits: true, click: 'hearts', color: '#6FAE8A', build(g, p, c) {
-    blob(g, [.11, .13, .06], [0, 0, .06], c, { kind: 'ceramic' }); blob(g, [.085, .1, .03], [0, 0, .095], '#4F8A68', { kind: 'ceramic' });
-    blob(g, [.04, .045, .035], [0, -.15, .06], '#A9D6A0'); for (const s of [-1, 1]) { blob(g, [.008, .008, .008], [s * .022, -.185, .07], DARK); for (const y of [-.08, .08]) blob(g, [.035, .03, .018], [s * .11, y, .02], '#A9D6A0'); }
+    for (const s of [-1, 1]) for (const y of [-.08, .08]) { const l = sub(g, 'leg'); blob(l, [.035, .03, .018], [s * .11, y, .02], '#A9D6A0'); pivot(l, [s * .08, y, .03]); }
+    const bd = sub(g, 'body'); blob(bd, [.11, .13, .06], [0, 0, .06], c, { kind: 'ceramic' }); blob(bd, [.085, .1, .03], [0, 0, .095], '#4F8A68', { kind: 'ceramic' });
+    const hd = sub(bd, 'head'); blob(hd, [.04, .045, .035], [0, -.15, .06], '#A9D6A0'); for (const s of [-1, 1]) blob(hd, [.008, .008, .008], [s * .022, -.185, .07], DARK, { part: 'eye' }); pivot(hd, [0, -.1, .06]);
+    pivot(bd, [0, 0, .02]);
   } },
   // ------------------------------------------------------------ plants
-  monstera: { name: 'Monstera', category: 'Plants', idle: 'sway', color: 'pot', build(g, p, c) {
+  monstera: { name: 'Monstera', category: 'Plants', color: 'pot', build(g, p, c) {
     cyl(g, .14, .32, [0, 0, .16], c, { kind: 'ceramic', r2: .17 }); cyl(g, .14, .02, [0, 0, .315], '#5A3A2A');
     [[0, 0, .85, 0], [.12, .05, .7, .9], [-.1, .08, .75, 2.2], [.05, -.12, .62, 3.4], [-.06, -.06, .95, 4.4], [.1, .1, 1.0, 5.4], [-.12, 0, .55, 1.6]].forEach(([dx, dy, h, a], i) => {
-      cyl(g, .008, h - .3, [dx * .5, dy * .5, .3 + (h - .3) / 2], p.leaf);
-      blob(g, [.17, .11, .012], [dx + .06 * Math.cos(a), dy + .06 * Math.sin(a), h], i % 2 ? p.leaf : p.leaf2, { rot: [.25, -.45, a] });
+      const st = sub(g, 'stem'); cyl(st, .008, h - .3, [dx * .5, dy * .5, .3 + (h - .3) / 2], p.leaf);
+      const lf = sub(st, 'leaf'); blob(lf, [.17, .11, .012], [dx + .06 * Math.cos(a), dy + .06 * Math.sin(a), h], i % 2 ? p.leaf : p.leaf2, { rot: [.25, -.45, a] }); pivot(lf, [dx * .5, dy * .5, h - .02]);
+      pivot(st, [dx * .3, dy * .3, .31]);
     });
   } },
-  snake: { name: 'Snake plant', category: 'Plants', idle: 'sway', color: '#F4EFE7', build(g, p, c) {
+  snake: { name: 'Snake plant', category: 'Plants', color: '#F4EFE7', build(g, p, c) {
     cyl(g, .13, .34, [0, 0, .17], c, { kind: 'ceramic' });
-    for (let i = 0; i < 8; i++) { const a = i * 2.4, r = .04 + .012 * (i % 3), h = .34 + .06 * ((i * 5) % 4); blob(g, [.04, .012, h], [r * Math.cos(a), r * Math.sin(a), .3 + h * .9], i % 2 ? '#3F7F58' : '#7FB069', { rot: [.12 * Math.sin(a), -.12 * Math.cos(a), a] }); }
+    for (let i = 0; i < 8; i++) { const a = i * 2.4, r = .04 + .012 * (i % 3), h = .34 + .06 * ((i * 5) % 4), st = sub(g, 'stem'); blob(st, [.04, .012, h], [r * Math.cos(a), r * Math.sin(a), .3 + h * .9], i % 2 ? '#3F7F58' : '#7FB069', { rot: [.12 * Math.sin(a), -.12 * Math.cos(a), a] }); st.userData.stiff = .35; pivot(st, [r * Math.cos(a), r * Math.sin(a), .32]); }
   } },
   cactus: { name: 'Cactus', category: 'Plants', sits: true, color: '#D27D5E', build(g, p, c) {
     cyl(g, .1, .14, [0, 0, .07], c, { kind: 'ceramic', r2: .12 }); blob(g, [.075, .075, .2], [0, 0, .32], '#5FA873');
@@ -325,10 +340,11 @@ export const ITEMS = {
     cyl(g, .028, .14, [-.02, 0, .15], '#6B4A35', { rot: [0, .3, 0] }); cyl(g, .022, .14, [.03, 0, .26], '#6B4A35', { rot: [0, -.6, 0] }); cyl(g, .016, .12, [-.03, 0, .34], '#6B4A35', { rot: [0, .9, 0] });
     for (const [x, y, z, s, col] of [[-.1, 0, .4, 1, '#5D7F5A'], [.1, .02, .33, .8, '#86A47F'], [.02, -.02, .47, .7, '#86A47F'], [-.16, .03, .32, .55, '#5D7F5A']]) blob(g, [.13 * s, .11 * s, .055 * s], [x, y, z], col);
   } },
-  palm: { name: 'Palm', category: 'Plants', idle: 'sway', color: '#D9B48A', build(g, p, c) {
-    cyl(g, .17, .3, [0, 0, .15], c, { kind: 'fabric' }); cyl(g, .022, .95, [0, 0, .75], '#8C6E55');
-    for (let i = 0; i < 9; i++) { const a = i * 2 * PI / 9; blob(g, [.3, .055, .01], [.24 * Math.cos(a), .24 * Math.sin(a), 1.2 - .1 * (i % 2)], i % 2 ? p.leaf : p.leaf2, { rot: [0, .45 + .25 * (i % 2), a] }); }
-    blob(g, [.04, .04, .05], [0, 0, 1.24], p.leaf);
+  palm: { name: 'Palm', category: 'Plants', color: '#D9B48A', build(g, p, c) {
+    cyl(g, .17, .3, [0, 0, .15], c, { kind: 'fabric' });
+    const st = sub(g, 'stem'); st.userData.stiff = .3; cyl(st, .022, .95, [0, 0, .75], '#8C6E55');
+    for (let i = 0; i < 9; i++) { const a = i * 2 * PI / 9, fr = sub(st, 'leaf'); blob(fr, [.3, .055, .01], [.24 * Math.cos(a), .24 * Math.sin(a), 1.2 - .1 * (i % 2)], i % 2 ? p.leaf : p.leaf2, { rot: [0, .45 + .25 * (i % 2), a] }); fr.userData.ang = a; pivot(fr, [0, 0, 1.22]); }
+    blob(st, [.04, .04, .05], [0, 0, 1.24], p.leaf); pivot(st, [0, 0, .3]);
   } },
   // ------------------------------------------------------------ lighting
   lamp: { name: 'Desk lamp', category: 'Lighting', sits: true, click: 'lamp', color: 'accent', build(g, p, c) {
@@ -338,13 +354,13 @@ export const ITEMS = {
   } },
   floorlamp: { name: 'Floor lamp', category: 'Lighting', color: '#FFF6E4', build(g, p, c) {
     cyl(g, .14, .03, [0, 0, .015], '#E3B54A', { kind: 'gold' }); cyl(g, .012, 1.4, [0, 0, .72], '#E3B54A', { kind: 'gold' });
-    cyl(g, .17, .22, [0, 0, 1.48], c, { kind: 'glow0.15/1.1', r2: .1 });
+    cyl(g, .17, .22, [0, 0, 1.48], c, { kind: 'glow0.15/1.1', r2: .1, act: { glow: true } });
   } },
   mushroom: { name: 'Mushroom lamp', category: 'Lighting', sits: true, color: '#FFB38A', build(g, p, c) {
-    cyl(g, .035, .12, [0, 0, .06], '#FFFFFF', { kind: 'ceramic' }); blob(g, [.1, .1, .07], [0, 0, .15], c, { kind: 'glow0.35/1.8' });
+    cyl(g, .035, .12, [0, 0, .06], '#FFFFFF', { kind: 'ceramic' }); blob(g, [.1, .1, .07], [0, 0, .15], c, { kind: 'glow0.35/1.8', act: { glow: true } });
   } },
   lava: { name: 'Lava lamp', category: 'Lighting', sits: true, color: '#FF8FCF', build(g, p, c) {
-    cyl(g, .06, .1, [0, 0, .05], '#C9D3E6', { kind: 'metal', r2: .04 }); blob(g, [.05, .05, .13], [0, 0, .22], c, { kind: 'glow0.5/2' }); cyl(g, .035, .06, [0, 0, .36], '#C9D3E6', { kind: 'metal', r2: .02 });
+    cyl(g, .06, .1, [0, 0, .05], '#C9D3E6', { kind: 'metal', r2: .04 }); blob(g, [.05, .05, .13], [0, 0, .22], c, { kind: 'glow0.5/2', act: { glow: true } }); cyl(g, .035, .06, [0, 0, .36], '#C9D3E6', { kind: 'metal', r2: .02 });
   } },
   fan: { name: 'Standing fan', category: 'Decor', color: '#F4F1EC', idle: 'spin', build(g, p, c) {
     cyl(g, .2, .04, [0, 0, .02], c, { kind: 'plastic' }); cyl(g, .02, 1.15, [0, 0, .6], c, { kind: 'plastic' });
@@ -354,10 +370,10 @@ export const ITEMS = {
   } },
   paperlamp: { name: 'Paper lamp', category: 'Lighting', color: '#FFF3DC', build(g, p, c) {
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) box(g, [.02, .02, .8], [sx * .11, sy * .11, .4], p.wood, { r: 0 });
-    box(g, [.2, .2, .62], [0, 0, .45], c, { kind: 'glow0.3/1.3', r: 0 }); for (const z of [.14, .45, .76]) box(g, [.24, .24, .015], [0, 0, z], p.wood, { r: 0 });
+    box(g, [.2, .2, .62], [0, 0, .45], c, { kind: 'glow0.3/1.3', r: 0, act: { glow: true } }); for (const z of [.14, .45, .76]) box(g, [.24, .24, .015], [0, 0, z], p.wood, { r: 0 });
   } },
   neonheart: { name: 'Neon heart', category: 'Lighting', wall: true, color: '#FF62D3', build(g, p, c) {
-    for (const s of [-1, 1]) { torus(g, .12, .016, [s * .12, -.03, .1], c, { kind: 'glow1.2/4', rot: [PI / 2, 0, 0] }); cyl(g, .016, .36, [s * .115, -.03, -.1], c, { kind: 'glow1.2/4', rot: [0, s * -.72, 0] }); }
+    for (const s of [-1, 1]) { torus(g, .12, .016, [s * .12, -.03, .1], c, { kind: 'glow1.2/4', rot: [PI / 2, 0, 0], act: { glow: true } }); cyl(g, .016, .36, [s * .115, -.03, -.1], c, { kind: 'glow1.2/4', rot: [0, s * -.72, 0], act: { glow: true } }); }
   } },
   // ------------------------------------------------------------ storage
   bookshelf: { name: 'Bookshelf', category: 'Storage', color: 'wood', build(g, p, c) {
@@ -369,20 +385,26 @@ export const ITEMS = {
       box(g, [w, d, .03], [0, 0, z], c, { r: .006 });
       if (i === 3) break;
       let x = -w / 2 + .05, k = 0;
-      while (x < w / 2 - .09) { const bw = [.05, .07, .045, .06][(k + i) % 4], bh = [.36, .3, .4, .33][(k * 3 + i) % 4]; box(g, [bw, .22, bh], [x + bw / 2, .02, z + .015 + bh / 2], p.books[(k + i) % p.books.length], { r: .008 }); x += bw + .008; k++; }
+      while (x < w / 2 - .09) { const bw = [.05, .07, .045, .06][(k + i) % 4], bh = [.36, .3, .4, .33][(k * 3 + i) % 4]; box(g, [bw, .22, bh], [x + bw / 2, .02, z + .015 + bh / 2], p.books[(k + i) % p.books.length], { r: .008, part: 'book' }); x += bw + .008; k++; }
     }
   } },
   cabinet: { name: 'Low cabinet', category: 'Storage', color: 'wood2', build(g, p, c) {
-    box(g, [1.0, .34, .42], [0, 0, .33], c, { r: .015 });
-    for (const sx of [-1, 1]) { for (const sy of [-1, 1]) cyl(g, .018, .12, [sx * .43, sy * .11, .06], p.wood); blob(g, [.014, .014, .014], [sx * .05, -.178, .36], p.wood); }
-    box(g, [.006, .004, .34], [0, -.171, .33], p.wood, { r: 0 });
+    box(g, [1.0, .33, .42], [0, .005, .33], c, { r: .015 }); box(g, [.94, .01, .36], [0, -.158, .33], '#3A2A22', { r: 0 });
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) cyl(g, .018, .12, [sx * .43, sy * .11, .06], p.wood);
+      const d = moving(g, { turn: ['z', sx * 1.75] }); box(d, [.485, .02, .39], [sx * .245, -.172, .33], c, { r: .008 }); blob(d, [.014, .014, .014], [sx * .05, -.19, .36], p.metal, { kind: 'metal' }); pivot(d, [sx * .49, -.172, .33]);
+    }
   } },
   wardrobe: { name: 'Wardrobe', category: 'Storage', color: 'wood', build(g, p, c) {
-    box(g, [.95, .5, 1.9], [0, 0, .97], c, { r: .02 }); box(g, [.006, .004, 1.7], [0, -.252, .97], p.metal, { r: 0 });
-    for (const s of [-1, 1]) { cyl(g, .012, .16, [s * .06, -.26, 1.0], p.metal, { kind: 'metal' }); for (const sy of [-1, 1]) cyl(g, .02, .04, [s * .4, sy * .18, .01], p.metal); }
+    box(g, [.95, .48, 1.9], [0, .01, .97], c, { r: .02 }); box(g, [.88, .01, 1.78], [0, -.232, .97], '#3A2A22', { r: 0 }); cyl(g, .012, .84, [0, -.1, 1.6], p.metal, { kind: 'metal', rot: [0, PI / 2, 0] });
+    for (const s of [-1, 1]) {
+      for (const sy of [-1, 1]) cyl(g, .02, .04, [s * .4, sy * .18, .01], p.metal);
+      box(g, [.2, .03, .5], [s * .2, -.1, 1.3], [p.soft, p.accent2][s < 0 ? 0 : 1], { kind: 'fabric', r: .012 });
+      const d = moving(g, { turn: ['z', s * 1.7] }); box(d, [.46, .02, 1.84], [s * .235, -.245, .97], c, { r: .008 }); cyl(d, .012, .16, [s * .05, -.265, 1.0], p.metal, { kind: 'metal' }); pivot(d, [s * .465, -.245, .97]);
+    }
   } },
   toychest: { name: 'Toy chest', category: 'Storage', color: '#F4A9C4', build(g, p, c) {
-    box(g, [.62, .38, .3], [0, 0, .15], c, { r: .02 }); box(g, [.65, .41, .07], [0, 0, .33], '#FFFFFF', { r: .025 }); box(g, [.07, .02, .09], [0, -.2, .27], '#E3B54A', { kind: 'gold', r: .008 });
+    box(g, [.62, .38, .3], [0, 0, .15], c, { r: .02 }); box(g, [.56, .32, .01], [0, 0, .301], '#3A2A22', { r: 0 }); const lid = moving(g, { turn: ['x', -1.25] }); box(lid, [.65, .41, .07], [0, 0, .335], '#FFFFFF', { r: .025 }); pivot(lid, [0, .2, .3]); box(g, [.07, .02, .09], [0, -.2, .25], '#E3B54A', { kind: 'gold', r: .008 });
   } },
   // ------------------------------------------------------------ decor
   rug: { name: 'Round rug', category: 'Decor', flat: true, color: 'accent', build(g, p, c) {
@@ -434,11 +456,16 @@ export const ITEMS = {
 };
 
 // Pets wander, stretch and groom in live mode. speed = room units per second, hop = bounce height, head = which piece nods.
-const pets = { cat: [.32, .012, 1], tuxedo: [.32, .012, 1], bunny: [.42, .09, 1], corgi: [.38, .02, 1], golden: [.34, .02, 1], hamster: [.3, .008, 1], turtle: [.07, 0, 2] };
-for (const [id, [speed, hop, head]] of Object.entries(pets)) ITEMS[id].pet = { speed, hop, head, calm: id === 'turtle' };
-const hints = { speaker: 'Paste your Spotify, YouTube Music or Apple Music link', laptop: 'Paste the app or site you work in most', tablet: 'Paste the app or site you use most', pc1: 'Paste the app or site you work in most', pc2: 'Paste the app or site you work in most', pc3: 'Paste your game, stream or Discord link',
-  tv: 'Paste your YouTube, Netflix or Twitch link', bookshelf: 'Paste your reading list, blog or GitHub', books: 'Paste your reading list or notes', frames: 'Paste your Instagram or photo album', poster: 'Paste your portfolio or favourite page', guitar: 'Paste your music or playlist link', mirror: 'Paste your Instagram or profile link' };
-for (const [id, h] of Object.entries(hints)) ITEMS[id].hint = h;
+// How each pet moves. speed = room units per second; lift = how far the body rises when it stands up;
+// tilt = how far a sitting body leans forward to walk; gait = walk | hop | scurry | paddle | perch.
+const pets = {
+  cat: { speed: .3, lift: .065, tilt: 0, gait: 'walk', stride: 26, tail: [.35, 1.6] }, tuxedo: { speed: .3, lift: .05, tilt: .95, gait: 'walk', stride: 26, tail: [.35, 1.6] },
+  bunny: { speed: .5, lift: 0, tilt: 0, gait: 'hop', hop: .11 }, corgi: { speed: .36, lift: 0, tilt: 0, gait: 'walk', stride: 30, tail: [.5, 7], stands: true },
+  golden: { speed: .34, lift: .15, tilt: 0, gait: 'walk', stride: 16, tail: [.45, 5] }, hamster: { speed: .34, lift: 0, tilt: 0, gait: 'scurry', sniff: true },
+  turtle: { speed: .06, lift: .012, tilt: 0, gait: 'paddle', stride: 90, calm: true }, parrot: { speed: 0, lift: 0, tilt: 0, gait: 'perch', tail: [.12, 1.2] },
+};
+for (const [id, cfg] of Object.entries(pets)) ITEMS[id].pet = cfg;
+for (const id of ['gaming', 'stool', 'sidetable', 'kopitable', 'beanbag', 'bubble']) ITEMS[id].click = 'spin';
 ITEMS.fishbowl.idle = 'swim'; ITEMS.clock.idle = 'clock';
 
 export const TINTS = ['#F4A582', '#EE8FA6', '#F2D57E', '#8FBF8A', '#8EC1E3', '#B9A3E3', '#8C6E55', '#4B4A6B', '#FFFFFF'];
@@ -446,6 +473,8 @@ export const TINTS = ['#F4A582', '#EE8FA6', '#F2D57E', '#8FBF8A', '#8EC1E3', '#B
 // A palette fills the same named colour slots for every item. "tile" (optional) gives the floor a checker pattern.
 const base = { cream: '#FFF8EE', pot: '#E08566', leaf: '#4F9E66', leaf2: '#79C58C' };
 export const PALETTES = {
+  natural: { ...base, name: 'Natural', wall: '#EFECE6', wall2: '#F4F2ED', floor: '#B98C5E', wood: '#7A5236', wood2: '#C49A6C', soft: '#8C9A88', soft2: '#EAE4D8', accent: '#B5683C', accent2: '#3E596B', metal: '#262626', cream: '#F6F3EC', pot: '#A85A3B', leaf: '#3B6642', leaf2: '#5A8655',
+    books: ['#3E596B', '#B5683C', '#8C9A88', '#D9C9A8', '#5C4A3D'], bg: ['#D9D5CE', '#B9B4AC'] },
   matcha: { ...base, name: 'Matcha', wall: '#E3EAD3', wall2: '#EEF1E4', floor: '#D9C3A0', wood: '#C9A27A', wood2: '#E6D2B5', soft: '#8FC28C', soft2: '#F5E9CF', accent: '#F6C46A', accent2: '#EE9A82', metal: '#5B6462',
     books: ['#8FC28C', '#F6C46A', '#EE9A82', '#89B5D8', '#C9A7E0'], bg: ['#F7F3EA', '#E6EEDD'] },
   strawberry: { ...base, name: 'Strawberry milk', wall: '#FADDE2', wall2: '#FDEBEE', floor: '#E9C7A8', wood: '#E7B3A8', wood2: '#FFFFFF', soft: '#EF8EA7', soft2: '#FFF2F4', accent: '#FFC97A', accent2: '#F4A4BA', metal: '#E3B54A', pot: '#FFFFFF',
@@ -463,6 +492,9 @@ export const PALETTES = {
 // A template = a style + a palette + a time of day + a list of items. Heights are worked out when it loads.
 const I = (item, x, y, rz = 0, tint = null, z = 0) => ({ item, pos: [x, y, z], rz, tint });
 export const TEMPLATES = {
+  home: { name: 'Home', style: 'real', palette: 'natural', mood: 'morning', items: [
+    I('rug', 1.9, 1.2, 0, '#D9CDB8'), I('bed', 1.03, 2.66, 90), I('cat', 1.45, 2.62, 60, '#D9A066'), I('desk', .33, 1.38, 90), I('laptop', .36, 1.25, 90), I('lamp', .2, 1.82, 90, '#262626'), I('mug', .5, .98, 0, '#F6F3EC'),
+    I('chair', .98, 1.3, -75), I('bookshelf', 2.68, 3.03), I('books', 2.68, 3.03), I('monstera', .4, .38), I('recliner', 2.55, .7, 25, '#6F7C6C'), I('floorlamp', 2.9, 2.2), I('poster', 1.1, 3.2, 0, '#3E596B', 1.6), I('clock', 0, 2.6, 90, '#262626', 2.0)] },
   matcha: { name: 'Matcha study', style: 'clay', palette: 'matcha', mood: 'morning', items: [
     I('rug', 1.9, 1.2), I('bed', 1.03, 2.66, 90), I('cat', 1.45, 2.62, 60), I('desk', .33, 1.38, 90), I('laptop', .36, 1.25, 90), I('lamp', .2, 1.82, 90), I('mug', .5, .98),
     I('chair', .98, 1.3, -75), I('bookshelf', 2.68, 3.03), I('succulents', 2.68, 3.03), I('monstera', .4, .38), I('beanbag', 2.5, .75), I('frames', 1.1, 3.2, 0, null, 1.5)] },

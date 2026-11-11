@@ -10,7 +10,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%;margin:0}
-body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:linear-gradient(180deg,var(--bg0),var(--bg1));overflow:hidden}
+body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:#D9D5CE;overflow:hidden}
 body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg,#191B3A,#2A2550);opacity:0;transition:opacity .9s}
 body.dark::before{opacity:1}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -133,7 +133,7 @@ body[data-mode="visit"] #visitbar{display:flex}
 <div class="lrow"><b>Templates</b><div id="templates" class="opts" role="group" aria-label="Room templates"></div></div>
 </div>
 </section>
-<p class="livehint">Live mode · pets wander by day and sleep at night</p>
+<p class="livehint">Live mode · click anything: curtains, window, drawers, blanket, lights</p>
 <div id="toast" role="status"></div>
 <div id="linkbar" hidden><a id="golink" target="_blank" rel="noopener noreferrer"><b id="goname"></b><small id="gohost"></small></a></div>
 <div id="visitbar"><span>You are visiting a room</span><button type="button" class="act" id="back">Back to my room</button></div>
